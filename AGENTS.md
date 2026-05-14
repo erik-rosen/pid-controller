@@ -13,6 +13,26 @@ This project is a closed-loop electronic throttle governor for a small marine en
 
 The goal is to maintain very low stable engine RPM under varying load conditions while preventing stalls and unsafe overspeed conditions.
 
+## Core Problem
+
+The engine's throttle backstop screw sets a fixed minimum idle position, but the correct idle position varies with engine temperature and load:
+
+- **Cold engine:** Needs more throttle to avoid stalling — backstop must be set high
+- **Hot engine in neutral:** Same backstop causes engine to race at high RPMs (dangerous when docking)
+- **Hot engine in gear at low speed:** Backstop prevents throttle from closing enough for slow docking maneuvers
+
+No single backstop position works across all conditions. The governor replaces the fixed backstop with closed-loop control: the backstop screw is set low enough for hot-engine operation, and the controller adds throttle as needed to prevent stalling when cold or under load.
+
+## Critical Operating Range
+
+The most important RPM range is 530–800 RPM (idle and docking). This is where:
+- The margin between stalling and racing is smallest
+- Engine temperature effects are most pronounced
+- Feed-forward accuracy matters most
+- The controller must react quickly but not overshoot
+
+Higher RPMs (1500+) are more forgiving — the engine responds linearly and the PID can easily compensate for feed-forward inaccuracy.
+
 ---
 
 # System Architecture
