@@ -1,6 +1,7 @@
 #include <Servo.h>
 #include <math.h>
 #include <hardware/watchdog.h>
+#include <hardware/structs/watchdog.h>
 
 // ===================== Pins =====================
 #define RPM_PIN   22
@@ -57,12 +58,15 @@ const float PID_OUT_MAX =  350.0f;
 // ===================== Feed-forward =====================
 struct Pt { float rpm; int us; };
 
+// Mapped in neutral at ~40°C coolant temp
 const Pt FF_NEUTRAL[] = {
-  {  530.0f, 1150 },
-  {  800.0f, 1204 },
-  { 1500.0f, 1402 },
-  { 2000.0f, 1567 },
-  { 2500.0f, 1732 },
+  {  530.0f, 1072 },
+  {  645.0f, 1095 },
+  {  930.0f, 1137 },
+  { 1190.0f, 1199 },
+  { 1820.0f, 1239 },
+  { 2250.0f, 1254 },
+  { 2500.0f, 1265 },
 };
 
 // Adaptive offset
@@ -85,8 +89,13 @@ Servo throttleServo;
 float rpmFilt = 0.0f;
 float iTermUs = 0.0f;
 float prevError = 0.0f;
-
 int lastServoUs = SERVO_US_MIN;
+
+// Target change detection over a rolling window
+const float TARGET_CHANGE_THRESHOLD_RPM = 200.0f;
+const uint32_t TARGET_WINDOW_MS = 2000;
+float targetRPMHistory = 0.0f;
+uint32_t targetHistoryMs = 0;
 
 // ===================== Helpers =====================
 static float clampf(float x, float lo, float hi) {
@@ -187,6 +196,10 @@ void writeServoFiltered(int desiredUs) {
 // ===================== Setup =====================
 void setup() {
   Serial.begin(SERIAL_BAUD);
+
+  // Disable watchdog in case it persisted across a soft reboot
+  watchdog_hw->ctrl = 0;
+
   delay(1500);
 
   analogReadResolution(12);
@@ -280,6 +293,17 @@ void loop() {
       ffOffsetUs = 0.0f;
       pidUs = 0.0f;
     } else {
+      // Reset adaptive state on large target RPM changes (e.g. cruise -> docking)
+      if (nowMs - targetHistoryMs >= TARGET_WINDOW_MS) {
+        if (targetRPMHistory > 0.0f &&
+            fabsf(targetRPM - targetRPMHistory) > TARGET_CHANGE_THRESHOLD_RPM) {
+          ffOffsetUs = 0.0f;
+          iTermUs = 0.0f;
+        }
+        targetRPMHistory = targetRPM;
+        targetHistoryMs = nowMs;
+      }
+
       float error = targetRPM - rpm;
 
       if (error > -ERROR_DEADBAND_RPM && error < ERROR_DEADBAND_RPM) {
@@ -349,7 +373,7 @@ void loop() {
   if (nowMs - lastPrintMs >= PRINT_INTERVAL_MS) {
     lastPrintMs = nowMs;
 
-    if (Serial && Serial.availableForWrite() > 80) {
+    if (Serial) {
       noInterrupts();
       uint32_t pc = pulseCountAccepted;
       uint32_t ivUs = goodIntervalMicros;
