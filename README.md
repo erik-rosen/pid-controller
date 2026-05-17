@@ -23,6 +23,8 @@ Maintains a target engine RPM by automatically adjusting the throttle via an RC 
 - **MCU:** Raspberry Pi Pico / Pico W (RP2040)
 - **Throttle actuator:** 20 kg RC servo with Bowden cable linkage
 - **RPM sensor:** NJK inductive sensor (4 pulses/rev) with optocoupler isolation
+
+  ![NJK sensor mounted on bracket, sensing flywheel magnets](rpm-njk.jpeg)
 - **Power:** 12V boat electrical system via XL4015 buck converter (~5.1V out)
 - **Controls:** Potentiometer (GP26), manual/auto toggle switch (GP16)
 
