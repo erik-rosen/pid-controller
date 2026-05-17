@@ -2,6 +2,8 @@
 
 A closed-loop electronic throttle governor for a small marine engine, built on a Raspberry Pi Pico.
 
+![Governor in action](demo.gif)
+
 ## Why this exists
 
 Small marine engines have a throttle backstop screw that sets the minimum idle position. The problem is that the right backstop setting changes with engine temperature:
